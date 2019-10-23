@@ -2,7 +2,12 @@
     <head>
         <style>
 li { cursor: pointer; }
-
+.condition { margin-left: 30px; }
+.action { margin-left: 30px; }
+.tokens { margin-left: 30px; }
+.triggers { margin-left: 30px; }
+span { margin-left: 5px; }
+div { border: 1px solid black; }
         </style>
     <script
   src="https://code.jquery.com/jquery-3.4.1.min.js"
@@ -28,7 +33,7 @@ li { cursor: pointer; }
                 {
                     type: 'OPTION',
                     text: 'The option text',
-                    result: [
+                    triggers: [
                         {
                             type: 'GOTO',
                             value: 'second'
@@ -42,7 +47,7 @@ li { cursor: pointer; }
                 {
                     type: 'OPTION',
                     text: 'This should just set a token',
-                    result: [
+                    triggers: [
                         {
                             type: 'SETTOKEN',
                             value: 'token1'
@@ -55,7 +60,7 @@ li { cursor: pointer; }
                 comment: '',
                 conditions: [{
                     type: 'ANY',
-                    tokens: ['token1']
+                    tokens: ['token1', '42342930']
                 }],
                 actions: [
                     {
@@ -87,7 +92,7 @@ li { cursor: pointer; }
                 {
                     type: 'OPTION',
                     text: 'The option text',
-                    result: [
+                    triggers: [
                         {
                             type: 'GOTO',
                             value: 'first'
@@ -119,28 +124,6 @@ li { cursor: pointer; }
   }
   let nextId = ''
   let currentId = ''
-
-  const results = {
-    SETTOKEN: t => {
-        tokens[t.value] = true
-    },
-    UNSETTOKEN: t => {
-        delete tokens[t.value]
-    },
-    GOTO: g => {
-        nextId = g.value
-    }
-  }
-
-  const actions = {
-    PRINT: a => $('#description').append($('<div></div>').html(a.text)),
-    OPTION: o => {
-        $('#options').append($('<li></li>').html(o.text).click(() => {
-            o.result.forEach(r => results[r.type](r))
-            refresh()
-        }))
-    }
-  }
   
   function evaluateCondition(c) {
       switch(c.type) {
@@ -200,29 +183,38 @@ li { cursor: pointer; }
 
 
     l.conditions.forEach(c => {
-
+        $c = $('<div></div>').addClass('condition')
+        $c.append($('<span></span>').text(c.type))
+        $tokens = $('<div></div>').addClass('tokens')
+        c.tokens.forEach(t => {
+            $tokens.append($('<div></div>').text(tokens[t].name))
+        })
+        $c.append($tokens)
+        $conditions.append($c)
     })
 
     l.actions.forEach(a => {
-        $a = $('<div></div>')
+        $a = $('<div></div>').addClass('action')
         $a.append($('<span></span>').text(a.type))
         $a.append($('<span></span>').text(a.text))
 
 
-        if (a.result) {
-            $results = $('<div></div>')
-            a.result.forEach(r => {
-                $results.append($('<span></span>').text(r.type))
+        if (a.triggers) {
+            $triggers = $('<div>Triggers: </div>').addClass('triggers')
+            a.triggers.forEach(r => {
+                $r = $('<div></div>')
+                $r.append($('<span></span>').text(r.type))
                 switch(r.type) {
                     case 'SETTOKEN':
                     case 'UNSETTOKEN':
-                    $results.append($('<span></span>').text(tokens[r.value].name))
+                    $r.append($('<span></span>').text(tokens[r.value].name))
                     break
                     case 'GOTO':
-                    $results.append($('<span></span>').text(situations[r.value].title))
-                }        
+                    $r.append($('<span></span>').text(situations[r.value].title))
+                }
+                $triggers.append($r)
             })
-            $actions.append($results)
+            $a.append($triggers)
         }
 
         
