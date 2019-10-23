@@ -1,0 +1,207 @@
+<html>
+    <head>
+        <style>
+li { cursor: pointer; }
+
+        </style>
+    <script
+  src="https://code.jquery.com/jquery-3.4.1.min.js"
+  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+  crossorigin="anonymous"></script>
+
+  <script>
+  var situations = {
+      first: {
+        title: 'TestTitle',
+        logic:[
+            {
+                conditions: [{
+                    type: 'ALWAYS',
+                    tokens: []
+                }],
+                actions:[ {
+                    type: 'PRINT',
+                    text: 'This is just a text'
+                },
+                {
+                    type: 'OPTION',
+                    text: 'The option text',
+                    result: [
+                        {
+                            type: 'GOTO',
+                            value: 'second'
+                        },
+                        {
+                            type: 'SETTOKEN',
+                            value: 'token1'
+                        }
+                    ]
+                },
+                {
+                    type: 'OPTION',
+                    text: 'This should just set a token',
+                    result: [
+                        {
+                            type: 'SETTOKEN',
+                            value: 'token1'
+                        }
+                    ]
+                }
+                ]
+            },
+            {
+                conditions: [{
+                    type: 'ANY',
+                    tokens: ['token1']
+                }],
+                actions: [
+                    {
+                    type: 'PRINT',
+                    text: 'Text set by token'
+                }
+
+                ]
+            }
+        ]
+      },
+      second: {
+        title: 'Second TestTitle',
+        logic:[
+            {
+                conditions: [{
+                    type: 'ALWAYS',
+                    tokens: []
+                }],
+                actions:[ {
+                    type: 'PRINT',
+                    text: 'This is just a text'
+                },
+                {
+                    type: 'PRINT',
+                    text: 'Second text'
+                },
+                {
+                    type: 'OPTION',
+                    text: 'The option text',
+                    result: [
+                        {
+                            type: 'GOTO',
+                            value: 'first'
+                        },
+                        {
+                            type: 'SETTOKEN',
+                            value: '4290+42342930'
+                        }
+                    ]
+                }
+                ]
+            }
+        ]
+      }
+  }
+
+  const tokens = {}
+  let nextId = ''
+  let currentId = ''
+
+  const results = {
+    SETTOKEN: t => {
+        tokens[t.value] = true
+    },
+    UNSETTOKEN: t => {
+        delete tokens[t.value]
+    },
+    GOTO: g => {
+        nextId = g.value
+    }
+  }
+
+  const actions = {
+    PRINT: a => $('#description').append($('<div></div>').html(a.text)),
+    OPTION: o => {
+        $('#options').append($('<li></li>').html(o.text).click(() => {
+            o.result.forEach(r => results[r.type](r))
+            refresh()
+        }))
+    }
+  }
+  
+  function evaluateCondition(c) {
+      switch(c.type) {
+        case 'ALWAYS':
+            return true
+        case 'ANY': 
+            let val = false
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    val = true
+                }
+            })
+            return val
+        case 'NOTANY': 
+            val = true
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    val = false
+                }
+            })
+            return val
+        case 'ALL': 
+            val = true
+            c.tokens.forEach(t => {
+                if (!tokens[t]) {
+                    val = false
+                }
+            })
+            return val
+        case 'ATLEAST':
+            let total = 0
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    total ++
+                }
+            })
+            return total >= c.limit
+      }
+      return true
+  }
+
+  function evaluateAction(a) {
+      actions[a.type](a)
+  }
+
+  function refresh() {
+    currentId = nextId
+    render()
+  }
+
+  function render() {
+    const l = situations[currentId]
+    $('#description').empty()
+    $('#options').empty()
+    nextId = currentId
+
+    $('#title').text(l.title)
+
+    l.logic.forEach(d => {
+        if (d.conditions.map(evaluateCondition).indexOf(false) < 0) {
+            d.actions.map(evaluateAction)
+        }
+    })
+
+  }
+
+  $(()=> {
+      currentId = 'first'
+      render()
+  })
+  </script>
+</head>
+<body>
+    <div id = "title"></div>
+    <div id = "content">
+        <div id="description"></div>
+        <ul id = "options"></ul>
+    </div>
+</body>
+</html>

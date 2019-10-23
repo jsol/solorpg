@@ -1,0 +1,278 @@
+<html>
+    <head>
+        <style>
+li { cursor: pointer; }
+
+        </style>
+    <script
+  src="https://code.jquery.com/jquery-3.4.1.min.js"
+  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+  crossorigin="anonymous"></script>
+
+  <script>
+  var situations = {
+      first: {
+        title: 'TestTitle',
+        comment: '',
+        logic:[
+            {
+                comment: 'A hidden comment',
+                conditions: [{
+                    type: 'ALWAYS',
+                    tokens: []
+                }],
+                actions:[ {
+                    type: 'PRINT',
+                    text: 'This is just a text'
+                },
+                {
+                    type: 'OPTION',
+                    text: 'The option text',
+                    result: [
+                        {
+                            type: 'GOTO',
+                            value: 'second'
+                        },
+                        {
+                            type: 'SETTOKEN',
+                            value: 'token1'
+                        }
+                    ]
+                },
+                {
+                    type: 'OPTION',
+                    text: 'This should just set a token',
+                    result: [
+                        {
+                            type: 'SETTOKEN',
+                            value: 'token1'
+                        }
+                    ]
+                }
+                ]
+            },
+            {
+                comment: '',
+                conditions: [{
+                    type: 'ANY',
+                    tokens: ['token1']
+                }],
+                actions: [
+                    {
+                    type: 'PRINT',
+                    text: 'Text set by token'
+                }
+
+                ]
+            }
+        ]
+      },
+      second: {
+        title: 'Second TestTitle',
+        comment: '',
+        logic:[
+            {
+                conditions: [{
+                    type: 'ALWAYS',
+                    tokens: []
+                }],
+                actions:[ {
+                    type: 'PRINT',
+                    text: 'This is just a text'
+                },
+                {
+                    type: 'PRINT',
+                    text: 'Second text'
+                },
+                {
+                    type: 'OPTION',
+                    text: 'The option text',
+                    result: [
+                        {
+                            type: 'GOTO',
+                            value: 'first'
+                        },
+                        {
+                            type: 'SETTOKEN',
+                            value: '4290+42342930'
+                        }
+                    ]
+                }
+                ]
+            }
+        ]
+      }
+  }
+
+  const tokens = {
+      '42342930': {
+          id: '42342930',
+          name: 'A token',
+          display: 'global'
+      },
+      'token1': {
+          id: 'token1',
+          name: 'Token 1, with a really long descriptive name',
+          display: 'local'
+
+      }
+  }
+  let nextId = ''
+  let currentId = ''
+
+  const results = {
+    SETTOKEN: t => {
+        tokens[t.value] = true
+    },
+    UNSETTOKEN: t => {
+        delete tokens[t.value]
+    },
+    GOTO: g => {
+        nextId = g.value
+    }
+  }
+
+  const actions = {
+    PRINT: a => $('#description').append($('<div></div>').html(a.text)),
+    OPTION: o => {
+        $('#options').append($('<li></li>').html(o.text).click(() => {
+            o.result.forEach(r => results[r.type](r))
+            refresh()
+        }))
+    }
+  }
+  
+  function evaluateCondition(c) {
+      switch(c.type) {
+        case 'ALWAYS':
+            return true
+        case 'ANY': 
+            let val = false
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    val = true
+                }
+            })
+            return val
+        case 'NOTANY': 
+            val = true
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    val = false
+                }
+            })
+            return val
+        case 'ALL': 
+            val = true
+            c.tokens.forEach(t => {
+                if (!tokens[t]) {
+                    val = false
+                }
+            })
+            return val
+        case 'ATLEAST':
+            let total = 0
+            c.tokens.forEach(t => {
+                if (tokens[t]) {
+                    total ++
+                }
+            })
+            return total >= c.limit
+      }
+      return true
+  }
+
+  function evaluateAction(a) {
+      actions[a.type](a)
+  }
+
+  function refresh() {
+    currentId = nextId
+    render()
+  }
+
+  function renderLogic(l) {
+    $logic = $('<div></div>').addClass('logic')
+    $conditions = $('<div></div>').addClass('conditions').append('<div>Conditions:</div>')
+    $actions = $('<div></div>').addClass('actions').append('<div>Actions:</div>')
+    $info = $('<div></div>')
+    $info.html(l.comment)
+
+
+    l.conditions.forEach(c => {
+
+    })
+
+    l.actions.forEach(a => {
+        $a = $('<div></div>')
+        $a.append($('<span></span>').text(a.type))
+        $a.append($('<span></span>').text(a.text))
+
+
+        if (a.result) {
+            $results = $('<div></div>')
+            a.result.forEach(r => {
+                $results.append($('<span></span>').text(r.type))
+                switch(r.type) {
+                    case 'SETTOKEN':
+                    case 'UNSETTOKEN':
+                    $results.append($('<span></span>').text(tokens[r.value].name))
+                    break
+                    case 'GOTO':
+                    $results.append($('<span></span>').text(situations[r.value].title))
+                }        
+            })
+            $actions.append($results)
+        }
+
+        
+        $actions.append($a)
+
+    })
+
+    $logic.append($info).append($conditions).append($actions)
+    $('#logic').append($logic)
+    
+  }
+
+  function render() {
+    const l = situations[currentId]
+    $('#title').text(l.title)
+
+    $('#logic').empty()
+    l.logic.forEach(renderLogic)
+  }
+
+
+  function createID() {
+      return Math.random().toString(36).substring(2) + Date.now().toString(36)
+  }
+
+  $(()=> {
+      currentId = 'first'
+      render()
+
+      $('#savetoken').click(() => {
+          const token = {
+              id: createID(),
+              name: $('#tokenname').val(),
+              display: $('#tokendisplay').val()
+          }
+
+          tokens[token.id] = token
+      })
+  })
+  </script>
+</head>
+<body>
+    <div id = "title"></div>
+    <div id = "logic"></div>
+
+    <div>
+        <h3>Create token</h3>
+        <input type="text" id = "tokenname">
+        <select id="tokendisplay"><option>global</option><option>local</option></select>
+        <button id="savetoken">Save</button>
+    </div>
+</body>
+</html>
